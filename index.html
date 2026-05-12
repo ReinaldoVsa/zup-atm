@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ATM ZUP">
+  <meta name="description" content="ATM ZUP - Sistema de Caixa Eletrônico via Bluetooth">
+  <title>ATM ZUP</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash" class="splash">
+  <div class="splash-logo">
+    <div class="splash-icon">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="12" width="56" height="40" rx="6" fill="#00e5ff" opacity="0.15"/>
+        <rect x="4" y="12" width="56" height="40" rx="6" stroke="#00e5ff" stroke-width="2"/>
+        <rect x="12" y="24" width="20" height="14" rx="3" fill="#00e5ff" opacity="0.3"/>
+        <rect x="12" y="24" width="20" height="14" rx="3" stroke="#00e5ff" stroke-width="1.5"/>
+        <circle cx="46" cy="31" r="7" fill="#00e5ff" opacity="0.2"/>
+        <circle cx="46" cy="31" r="7" stroke="#00e5ff" stroke-width="1.5"/>
+        <path d="M43 31l2 2 4-4" stroke="#00e5ff" stroke-width="2" stroke-linecap="round"/>
+        <rect x="12" y="44" width="6" height="3" rx="1" fill="#00e5ff" opacity="0.6"/>
+        <rect x="20" y="44" width="6" height="3" rx="1" fill="#00e5ff" opacity="0.6"/>
+        <rect x="28" y="44" width="6" height="3" rx="1" fill="#00e5ff" opacity="0.6"/>
+      </svg>
+    </div>
+    <h1>ATM ZUP</h1>
+    <p>v1.0.0 | Build 20260512</p>
+  </div>
+  <div class="splash-progress">
+    <div class="splash-bar"><div class="splash-fill" id="splashFill"></div></div>
+    <span id="splashStatus">Inicializando sistema...</span>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="app hidden">
+
+  <!-- TOP STATUS BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="app-brand">
+        <span class="brand-name">ATM ZUP</span>
+        <span class="brand-build">v1.0.0 | Build 20260512</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="ble-status" id="bleStatusBadge">
+        <span class="ble-dot" id="bleDot"></span>
+        <span id="bleStatusText">DESCONECTADO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- DEVICE INFO BAR -->
+  <div class="device-bar" id="deviceBar">
+    <div class="device-chip" id="hwChip">
+      <span class="chip-icon">⊕</span>
+      <span class="chip-label">HW ID</span>
+      <span class="chip-val" id="hwId">—</span>
+    </div>
+    <div class="device-chip" id="uuidChip">
+      <span class="chip-icon">◈</span>
+      <span class="chip-label">UUID</span>
+      <span class="chip-val" id="uuidDisplay">—</span>
+    </div>
+    <div class="device-chip" id="bleChip">
+      <span class="chip-icon">⌘</span>
+      <span class="chip-label">BLE</span>
+      <span class="chip-val" id="bleNameDisplay">—</span>
+    </div>
+    <div class="device-chip secure">
+      <span class="chip-icon">🔒</span>
+      <span class="chip-label">CRIPTO</span>
+      <span class="chip-val">AES-256</span>
+    </div>
+  </div>
+
+  <!-- PAGES CONTAINER -->
+  <div class="pages" id="pages">
+
+    <!-- PAGE: OPERAÇÕES -->
+    <div class="page active" id="pageOpera">
+      <!-- OPERATOR CARD -->
+      <div class="operator-card" id="operatorCard">
+        <div class="operator-avatar" id="operatorAvatar">—</div>
+        <div class="operator-info">
+          <span class="operator-name" id="operatorName">Sem operador</span>
+          <span class="operator-role" id="operatorRole">Faça login</span>
+        </div>
+        <div class="session-badge" id="sessionBadge">INATIVO</div>
+      </div>
+
+      <!-- CONNECT PANEL (shown when not connected) -->
+      <div class="connect-panel" id="connectPanel">
+        <div class="connect-icon">
+          <svg viewBox="0 0 80 80" fill="none">
+            <circle cx="40" cy="40" r="35" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.4"/>
+            <circle cx="40" cy="40" r="25" stroke="#00e5ff" stroke-width="1" opacity="0.3"/>
+            <circle cx="40" cy="40" r="8" fill="#00e5ff" opacity="0.2"/>
+            <circle cx="40" cy="40" r="8" stroke="#00e5ff" stroke-width="2"/>
+            <path d="M40 20 L40 32 M40 48 L40 60 M20 40 L32 40 M48 40 L60 40" stroke="#00e5ff" stroke-width="1.5" opacity="0.5"/>
+          </svg>
+        </div>
+        <h3>Conectar ao ATM</h3>
+        <p>Aproxime o dispositivo do caixa eletrônico para iniciar o scan Bluetooth automático</p>
+        <button class="btn-primary btn-scan" id="btnScan" onclick="startBLEScan()">
+          <span class="btn-icon">⌘</span>
+          SCAN BLUETOOTH
+        </button>
+        <div class="scan-results hidden" id="scanResults">
+          <div class="scan-list" id="scanList"></div>
+        </div>
+      </div>
+
+      <!-- OPERATION PANEL (shown when connected) -->
+      <div class="operation-panel hidden" id="operationPanel">
+        <!-- ATM DISPLAY -->
+        <div class="atm-display">
+          <div class="atm-display-label">VALOR DO SAQUE</div>
+          <div class="atm-amount">
+            <span class="currency">R$</span>
+            <span class="amount-value" id="amountDisplay">0,00</span>
+          </div>
+        </div>
+
+        <!-- NUMPAD -->
+        <div class="numpad" id="numpad">
+          <div class="numpad-grid">
+            <button class="numpad-btn" onclick="numpadPress('1')">1</button>
+            <button class="numpad-btn" onclick="numpadPress('2')">2</button>
+            <button class="numpad-btn" onclick="numpadPress('3')">3</button>
+            <button class="numpad-btn" onclick="numpadPress('4')">4</button>
+            <button class="numpad-btn" onclick="numpadPress('5')">5</button>
+            <button class="numpad-btn" onclick="numpadPress('6')">6</button>
+            <button class="numpad-btn" onclick="numpadPress('7')">7</button>
+            <button class="numpad-btn" onclick="numpadPress('8')">8</button>
+            <button class="numpad-btn" onclick="numpadPress('9')">9</button>
+            <button class="numpad-btn numpad-clear" onclick="numpadClear()">C</button>
+            <button class="numpad-btn" onclick="numpadPress('0')">0</button>
+            <button class="numpad-btn numpad-del" onclick="numpadDel()">⌫</button>
+          </div>
+
+          <!-- QUICK VALUES -->
+          <div class="quick-values">
+            <button class="quick-btn" onclick="setQuickValue(20)">R$20</button>
+            <button class="quick-btn" onclick="setQuickValue(50)">R$50</button>
+            <button class="quick-btn" onclick="setQuickValue(100)">R$100</button>
+            <button class="quick-btn" onclick="setQuickValue(200)">R$200</button>
+          </div>
+        </div>
+
+        <!-- RELEASE BUTTON -->
+        <button class="btn-release" id="btnRelease" onclick="liberarDinheiro()">
+          <span id="releaseText">LIBERAR DINHEIRO</span>
+          <div class="release-loader hidden" id="releaseLoader">
+            <div class="spinner"></div>
+          </div>
+        </button>
+
+        <!-- SECURITY BADGES -->
+        <div class="security-badges">
+          <span class="sec-badge">HMAC-SHA256</span>
+          <span class="sec-badge">AES-256</span>
+          <span class="sec-badge">TLS 1.3</span>
+          <span class="sec-badge">Zero Trust</span>
+        </div>
+
+        <!-- NOTES BREAKDOWN -->
+        <div class="notes-panel hidden" id="notesPanel">
+          <div class="notes-title">COMPOSIÇÃO DAS NOTAS</div>
+          <div class="notes-grid" id="notesGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: INVENTÁRIO -->
+    <div class="page" id="pageInvent">
+      <div class="page-header">
+        <h2>Inventário</h2>
+        <span class="page-subtitle">Notas disponíveis no caixa</span>
+      </div>
+      <div class="inventory-container" id="inventoryContainer">
+        <div class="inv-connect-msg" id="invConnectMsg">
+          <p>Conecte ao ATM para ver o inventário</p>
+        </div>
+        <div class="inv-cards hidden" id="invCards"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: DASHBOARD -->
+    <div class="page" id="pageDash">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <span class="page-subtitle">Estatísticas em tempo real</span>
+      </div>
+      <div class="dashboard-grid" id="dashGrid">
+        <div class="dash-card">
+          <div class="dash-card-label">Total Liberado</div>
+          <div class="dash-card-val" id="dashTotal">R$ 0,00</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-label">Transações</div>
+          <div class="dash-card-val" id="dashCount">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-label">Sessão</div>
+          <div class="dash-card-val" id="dashSession">00:00</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-label">Status ATM</div>
+          <div class="dash-card-val status-val" id="dashStatus">OFFLINE</div>
+        </div>
+      </div>
+      <div class="tx-history">
+        <div class="tx-header">Histórico de Transações</div>
+        <div class="tx-list" id="txList">
+          <div class="tx-empty">Nenhuma transação ainda</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: CONSOLE -->
+    <div class="page" id="pageCons">
+      <div class="page-header">
+        <h2>Console</h2>
+        <button class="btn-clear-console" onclick="clearConsole()">Limpar</button>
+      </div>
+      <div class="console-wrapper">
+        <div class="console-titlebar">
+          <span class="term-dot red"></span>
+          <span class="term-dot yellow"></span>
+          <span class="term-dot green"></span>
+          <span class="console-title">ATM ZUP CONSOLE</span>
+        </div>
+        <div class="console-log" id="consoleLog"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: TÉCNICO -->
+    <div class="page" id="pageTech">
+      <div class="page-header">
+        <h2>Técnico</h2>
+        <span class="page-subtitle">Configurações avançadas</span>
+      </div>
+      <div class="tech-section">
+        <div class="tech-label">UUID do ATM (Manual)</div>
+        <div class="tech-input-row">
+          <input type="text" id="manualUUID" placeholder="ATM-XXXXXXXX" class="tech-input" maxlength="40">
+          <button class="btn-connect-manual" onclick="connectManualUUID()">CONECTAR</button>
+        </div>
+      </div>
+      <div class="tech-section">
+        <div class="tech-label">Configurações BLE</div>
+        <div class="tech-row">
+          <span>Auto-scan na abertura</span>
+          <label class="toggle"><input type="checkbox" id="autoScan" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="tech-row">
+          <span>Reconexão automática</span>
+          <label class="toggle"><input type="checkbox" id="autoReconnect" checked><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div class="tech-section">
+        <div class="tech-label">Criptografia</div>
+        <div class="tech-info-row"><span>Algoritmo</span><span class="tech-val">AES-256-GCM</span></div>
+        <div class="tech-info-row"><span>MAC</span><span class="tech-val">HMAC-SHA256</span></div>
+        <div class="tech-info-row"><span>TLS</span><span class="tech-val">1.3</span></div>
+        <div class="tech-info-row"><span>Zero Trust</span><span class="tech-val green">ATIVO</span></div>
+      </div>
+      <div class="tech-section">
+        <div class="tech-label">Ações do Sistema</div>
+        <button class="btn-tech" onclick="resetSystem()">🔄 Reiniciar Sistema</button>
+        <button class="btn-tech danger" onclick="disconnectATM()">⚡ Desconectar ATM</button>
+        <button class="btn-tech" onclick="exportLogs()">📋 Exportar Logs</button>
+      </div>
+    </div>
+
+    <!-- PAGE: PERFIL -->
+    <div class="page" id="pageProfile">
+      <div class="page-header">
+        <h2>Perfil</h2>
+      </div>
+
+      <!-- LOGIN FORM (shown when logged out) -->
+      <div class="login-form" id="loginForm">
+        <div class="login-icon">👤</div>
+        <h3>Acesso do Operador</h3>
+        <input type="text" id="loginName" placeholder="Nome do operador" class="form-input">
+        <input type="password" id="loginPin" placeholder="PIN (4 dígitos)" class="form-input" maxlength="4" inputmode="numeric">
+        <button class="btn-primary" onclick="doLogin()">ENTRAR</button>
+      </div>
+
+      <!-- PROFILE CARD (shown when logged in) -->
+      <div class="profile-card hidden" id="profileCard">
+        <div class="profile-avatar large" id="profileAvatar">AR</div>
+        <div class="profile-name" id="profileName">Ana Rodrigues</div>
+        <div class="profile-role">Operador</div>
+        <div class="profile-stats">
+          <div class="pstat"><div class="pstat-val" id="pstatTx">0</div><div class="pstat-label">Transações</div></div>
+          <div class="pstat"><div class="pstat-val" id="pstatTotal">R$0</div><div class="pstat-label">Liberado</div></div>
+          <div class="pstat"><div class="pstat-val" id="pstatTime">0min</div><div class="pstat-label">Sessão</div></div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()">ENCERRAR SESSÃO</button>
+      </div>
+    </div>
+
+  </div><!-- /pages -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottomnav">
+    <button class="nav-btn active" id="nav-opera" onclick="switchPage('Opera')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <path d="M2 10h20"/>
+        <path d="M7 15h2M13 15h4"/>
+      </svg>
+      <span>Opera...</span>
+    </button>
+    <button class="nav-btn" id="nav-invent" onclick="switchPage('Invent')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 9h18M9 21V9"/>
+        <path d="M7 6h.01M12 6h.01M17 6h.01"/>
+      </svg>
+      <span>Invent...</span>
+    </button>
+    <button class="nav-btn" id="nav-dash" onclick="switchPage('Dash')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="2" y="12" width="6" height="9" rx="1"/>
+        <rect x="9" y="7" width="6" height="14" rx="1"/>
+        <rect x="16" y="3" width="6" height="18" rx="1"/>
+      </svg>
+      <span>Dashb...</span>
+    </button>
+    <button class="nav-btn" id="nav-cons" onclick="switchPage('Cons')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M7 8l4 4-4 4M13 16h4"/>
+      </svg>
+      <span>Cons...</span>
+    </button>
+    <button class="nav-btn" id="nav-tech" onclick="switchPage('Tech')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+      </svg>
+      <span>Técnico</span>
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="switchPage('Profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="7" r="4"/>
+        <path d="M4 21v-2a8 8 0 0116 0v2"/>
+      </svg>
+      <span>Perfil</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast hidden" id="toast"></div>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
